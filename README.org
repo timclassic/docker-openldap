@@ -1,0 +1,66 @@
+* Docker build of OpenLDAP
+  This repository builds a Docker container hosting an OpenLDAP
+  instance.
+
+** Run It
+   Assuming you have Docker installed, you may try out this image
+   immediately:
+   #+BEGIN_SRC sh
+     docker run -it --rm stoo/openldap
+   #+END_SRC
+
+** Build It
+   Run the following to create the images:
+   #+BEGIN_SRC sh
+     make
+   #+END_SRC
+
+** Dependencies
+   - GNU Make
+   - Docker
+
+** Persistent Data
+   The Dockerfile does not create any volumes.  It is expected that
+   the host running docker binds following container locations to an
+   appropriate external filesystem location:
+
+   | Purpose         | Container FS Location | Example Bind Location  |
+   |-----------------+-----------------------+------------------------|
+   | OpenLDAP Config | /etc/ldap             | /srv/docker/<NAME>/etc |
+   | LDAP Database   | /var/lib/ldap         | /srv/docker/<NAME>/var |
+
+   Alternatively, you could use Data-only containers with volumes
+   mapped to the above container locations.
+
+   You may bootstrap the contents of these directories by using the
+   following procedure.  These commands create etc/ and var/
+   directories in the current directory with initial contents pulled
+   from the Docker image, corresponding to the default configuration
+   and data set up by the Debian packages:
+   #+BEGIN_SRC sh
+     # Copy contents of /etc/ldap from image
+     mkdir etc && pushd etc
+     docker run --rm stoo/openldap \
+         bash -c "cd /etc/ldap && tar cf - ." | tar vxf -
+     popd
+     
+     # Copy contents of /var/lib/ldap from image
+     mkdir var && pushd var
+     docker run --rm stoo/openldap \
+         bash -c "cd /var/lib/ldap && tar cf - ." | tar vxf -
+     popd
+   #+END_SRC
+   Note that this procedure does not create a permanent container and
+   only requires the image itself.
+
+   Continuing our example above, the docker container might be started
+   with the following command (assuming a name of `ldap1'):
+   #+BEGIN_SRC sh
+     docker run -d \
+         --name=openldap_ldap1 \
+         -v /srv/docker/ldap1/etc:/etc/ldap \
+         -v /srv/docker/ldap1/var:/var/lib/ldap \
+         -p 389:389/tcp \
+         -p 636:636/udp \
+         stoo/openldap:latest
+   #+END_SRC
